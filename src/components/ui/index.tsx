@@ -13,7 +13,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", isLoading, children, disabled, ...props }, ref) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none cursor-pointer active:scale-[0.98]";
+      "inline-flex items-center justify-center font-medium rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none cursor-pointer active:scale-[0.98]";
 
     const variantStyles = {
       primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-500 shadow-sm",
@@ -75,7 +75,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              "w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3.5 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50",
+              "w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50",
               leftIcon && "pl-10",
               rightIcon && "pr-10",
               error && "border-rose-500 focus:border-rose-500 focus:ring-rose-500",
@@ -113,14 +113,14 @@ export function Badge({ className, variant = "neutral", size = "sm", children, .
   };
 
   const sizeStyles = {
-    sm: "px-2 py-0.5 text-[11px]",
-    md: "px-2.5 py-1 text-xs",
+    sm: "px-2.5 py-0.5 text-[11px]",
+    md: "px-3 py-1 text-xs",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border font-medium capitalize select-none leading-none",
+        "inline-flex items-center gap-1 rounded-full border font-semibold capitalize select-none leading-none",
         variantStyles[variant],
         sizeStyles[size],
         className
@@ -132,7 +132,7 @@ export function Badge({ className, variant = "neutral", size = "sm", children, .
   );
 }
 
-// MODAL
+// MODAL (Responsive Mobile Bottom Sheet & Desktop Dialog)
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -146,29 +146,32 @@ export function Modal({ isOpen, onClose, title, description, children, maxWidth 
   if (!isOpen) return null;
 
   const widthStyles = {
-    sm: "max-w-sm",
-    md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
-    "2xl": "max-w-2xl",
+    sm: "sm:max-w-sm",
+    md: "sm:max-w-md",
+    lg: "sm:max-w-lg",
+    xl: "sm:max-w-xl",
+    "2xl": "sm:max-w-2xl",
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" onClick={onClose} />
 
-      {/* Modal Container */}
+      {/* Modal / Bottom Sheet Container */}
       <div
         className={cn(
-          "relative w-full rounded-2xl bg-white dark:bg-zinc-900 p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-all max-h-[90vh] flex flex-col z-10 animate-fade-in overflow-hidden",
+          "relative w-full rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800 transition-all max-h-[90vh] sm:max-h-[85vh] flex flex-col z-10 animate-fade-in overflow-hidden",
           widthStyles[maxWidth]
         )}
       >
+        {/* Mobile Drag Indicator */}
+        <div className="sm:hidden w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-3 shrink-0" />
+
         {(title || description) && (
           <div className="mb-4">
             {title && <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{title}</h3>}
-            {description && <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{description}</p>}
+            {description && <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{description}</p>}
           </div>
         )}
         <div className="overflow-y-auto flex-1 pr-1">{children}</div>

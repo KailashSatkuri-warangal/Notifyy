@@ -8,6 +8,8 @@ import { noteService } from "@/services/NoteService";
 import { contactService } from "@/services/ContactService";
 import { ActivityCard } from "@/components/activities/ActivityCard";
 import { RescheduleModal } from "@/components/activities/RescheduleModal";
+import { WhatsAppModal } from "@/components/activities/WhatsAppModal";
+import { AISummaryCard } from "@/components/activities/AISummaryCard";
 import { UnifiedActivity, Contact, Note, ActivityHistory } from "@/types";
 import { Button, Input, Modal, EmptyState } from "@/components/ui";
 import {
@@ -23,11 +25,12 @@ import {
   FileText,
   ArrowLeft,
   Edit2,
-  CheckCircle2,
-  RotateCcw,
+  CalendarPlus,
+  Download,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
-import { format } from "@/lib/date-utils";
+import { format, generateIcsContent, downloadIcsFile } from "@/lib/date-utils";
+import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 
 interface ContactDetailData extends Contact {
@@ -41,6 +44,7 @@ export default function ContactDetailPage() {
   const contactId = params?.id as string;
   const { contacts, unifiedActivities, openQuickCreate, refreshData } = useDataStore();
   const { initiateCall } = useCallAction();
+  const { toast } = useToast();
 
   const [detailedContact, setDetailedContact] = useState<ContactDetailData | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
@@ -48,6 +52,7 @@ export default function ContactDetailPage() {
   const [quickNoteText, setQuickNoteText] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [rescheduleTarget, setRescheduleTarget] = useState<UnifiedActivity | null>(null);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
   // Edit contact modal state
   const [isEditing, setIsEditing] = useState(false);
@@ -162,7 +167,25 @@ export default function ContactDetailPage() {
     }
   };
 
-  const cleanPhone = contact.mobile.replace(/[^\d+]/g, "");
+  const handleExportScheduleIcs = () => {
+    if (contactActivities.length === 0) {
+      toast("No scheduled activities for this contact", "info");
+      return;
+    }
+
+    const icsContent = generateIcsContent(
+      contactActivities.map((a) => ({
+        id: a.id,
+        title: `${a.type === "meeting" ? "Meeting" : "Follow-Up"}: ${a.title} (${contact.name})`,
+        date: a.date,
+        time: a.time,
+        location: a.location,
+        description: `Company: ${contact.company} · Mobile: ${contact.mobile}\n\nNotes: ${a.notes || ""}`,
+      }))
+    );
+    downloadIcsFile(`${contact.name.toLowerCase().replace(/\s+/g, "_")}_schedule`, icsContent);
+    toast("Calendar schedule exported (.ics)", "success");
+  };
 
   return (
     <div className="space-y-6">
@@ -217,13 +240,21 @@ export default function ContactDetailPage() {
           </div>
 
           {/* Primary Action Buttons: Call, WhatsApp, Email */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => initiateCall(contact)}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
             >
               <Phone className="w-4 h-4 fill-current" />
               <span>Call Contact</span>
+            </button>
+
+            <button
+              onClick={() => setIsWhatsAppOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900 font-bold text-xs border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4 text-emerald-600" />
+              <span>WhatsApp Composer</span>
             </button>
 
             {contact.email && (
@@ -235,16 +266,6 @@ export default function ContactDetailPage() {
                 <span>Email</span>
               </a>
             )}
-
-            <a
-              href={`https://wa.me/${cleanPhone.replace("+", "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs border border-zinc-200 dark:border-zinc-700 transition-colors"
-            >
-              <MessageSquare className="w-4 h-4 text-emerald-600" />
-              <span>WhatsApp</span>
-            </a>
           </div>
         </div>
 
@@ -260,28 +281,41 @@ export default function ContactDetailPage() {
           </div>
         )}
 
-        {/* Quick Activity Creator Bar */}
-        <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => openQuickCreate("follow_up", contact.id)}
-            className="text-xs"
+        {/* Quick Activity Creator & Calendar Sync Bar */}
+        <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => openQuickCreate("follow_up", contact.id)}
+              className="text-xs"
+            >
+              <Clock className="w-3.5 h-3.5 mr-1" />
+              + Schedule Follow-Up
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openQuickCreate("meeting", contact.id)}
+              className="text-xs"
+            >
+              <Video className="w-3.5 h-3.5 mr-1 text-blue-600" />
+              + Schedule Meeting
+            </Button>
+          </div>
+
+          <button
+            onClick={handleExportScheduleIcs}
+            className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40"
           >
-            <Clock className="w-3.5 h-3.5 mr-1" />
-            + Schedule Follow-Up
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openQuickCreate("meeting", contact.id)}
-            className="text-xs"
-          >
-            <Video className="w-3.5 h-3.5 mr-1 text-blue-600" />
-            + Schedule Meeting
-          </Button>
+            <Download className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Export Schedule (.ics)</span>
+          </button>
         </div>
       </div>
+
+      {/* AI Relationship Intelligence Card */}
+      <AISummaryCard contactId={contact.id} />
 
       {/* Inline Quick Note Bar */}
       <form
@@ -474,6 +508,13 @@ export default function ContactDetailPage() {
       <RescheduleModal
         activity={rescheduleTarget}
         onClose={() => setRescheduleTarget(null)}
+      />
+
+      {/* WhatsApp Modal */}
+      <WhatsAppModal
+        contact={contact}
+        isOpen={isWhatsAppOpen}
+        onClose={() => setIsWhatsAppOpen(false)}
       />
 
       {/* Edit Contact Modal */}

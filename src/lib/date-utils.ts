@@ -14,6 +14,7 @@ import {
   addHours,
   subHours,
   subMinutes,
+  addMinutes,
   differenceInMinutes,
   differenceInHours,
   differenceInDays,
@@ -139,6 +140,109 @@ export function getRelativeTimeLabel(dateStr: string, timeStr: string): string {
   }
 }
 
+/**
+ * Format Date to UTC Google Calendar format: YYYYMMDDTHHmmSSZ
+ */
+function toGCalUtcString(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+/**
+ * Generate 1-Click Google Calendar Add Link
+ */
+export function generateGoogleCalendarUrl(params: {
+  title: string;
+  date: string;
+  time: string;
+  durationMinutes?: number;
+  location?: string;
+  description?: string;
+}): string {
+  const startDate = parseActivityDateTime(params.date, params.time);
+  const duration = params.durationMinutes || 30;
+  const endDate = addMinutes(startDate, duration);
+
+  const startUtc = toGCalUtcString(startDate);
+  const endUtc = toGCalUtcString(endDate);
+
+  const baseUrl = "https://calendar.google.com/calendar/render";
+  const searchParams = new URLSearchParams({
+    action: "TEMPLATE",
+    text: params.title,
+    dates: `${startUtc}/${endUtc}`,
+    details: params.description || "",
+    location: params.location || "",
+  });
+
+  return `${baseUrl}?${searchParams.toString()}`;
+}
+
+/**
+ * Generate RFC 5545 iCalendar (.ics) content for single or multiple activities
+ */
+export function generateIcsContent(
+  events: Array<{
+    id?: string;
+    title: string;
+    date: string;
+    time: string;
+    durationMinutes?: number;
+    location?: string;
+    description?: string;
+  }>
+): string {
+  const nowUtc = toGCalUtcString(new Date());
+
+  const eventBlocks = events
+    .map((event) => {
+      const startDate = parseActivityDateTime(event.date, event.time);
+      const duration = event.durationMinutes || 30;
+      const endDate = addMinutes(startDate, duration);
+      const uid = event.id ? `${event.id}@notifyy.app` : `${Date.now()}-${Math.random()}@notifyy.app`;
+
+      return [
+        "BEGIN:VEVENT",
+        `UID:${uid}`,
+        `DTSTAMP:${nowUtc}`,
+        `DTSTART:${toGCalUtcString(startDate)}`,
+        `DTEND:${toGCalUtcString(endDate)}`,
+        `SUMMARY:${event.title.replace(/\n/g, "\\n")}`,
+        event.description ? `DESCRIPTION:${event.description.replace(/\n/g, "\\n")}` : "",
+        event.location ? `LOCATION:${event.location.replace(/\n/g, "\\n")}` : "",
+        "STATUS:CONFIRMED",
+        "END:VEVENT",
+      ]
+        .filter(Boolean)
+        .join("\r\n");
+    })
+    .join("\r\n");
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Notifyy//Smart Follow-Up Calendar//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    eventBlocks,
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+/**
+ * Trigger download of .ics calendar file
+ */
+export function downloadIcsFile(filename: string, content: string): void {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".ics") ? filename : `${filename}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export {
   format,
   parse,
@@ -154,6 +258,7 @@ export {
   subMonths,
   subHours,
   subMinutes,
+  addMinutes,
   startOfDay,
   endOfDay,
   startOfWeek,
