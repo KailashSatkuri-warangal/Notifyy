@@ -1,0 +1,201 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  name         String
+  mobile       String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  workspaces   Workspace[]
+}
+
+model Workspace {
+  id            String            @id @default(cuid())
+  name          String
+  ownerId       String
+  owner         User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  settings      UserSettings?
+  contacts      Contact[]
+  meetings      Meeting[]
+  followUps     FollowUp[]
+  notes         Note[]
+  reminders     Reminder[]
+  history       ActivityHistory[]
+  notifications Notification[]
+
+  @@index([ownerId])
+}
+
+model UserSettings {
+  id                      String    @id @default(cuid())
+  workspaceId             String    @unique
+  workspace               Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                    String
+  mobile                  String?
+  email                   String?
+  dailySummaryEnabled     Boolean   @default(true)
+  dailySummaryTime        String    @default("08:00")
+  meetingReminderEnabled  Boolean   @default(true)
+  followUpReminderEnabled Boolean   @default(true)
+  overdueAlertsEnabled    Boolean   @default(true)
+  soundEnabled            Boolean   @default(true)
+  vibrationEnabled        Boolean   @default(true)
+  defaultReminder         String    @default("1_hour")
+  theme                   String    @default("system")
+  updatedAt               DateTime  @updatedAt
+}
+
+model Contact {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  company         String
+  mobile          String
+  email           String?
+  address         String?
+  notes           String?
+  avatarColor     String?
+  isArchived      Boolean           @default(false)
+  lastContactedAt String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  meetings        Meeting[]
+  followUps       FollowUp[]
+  notesList       Note[]
+  history         ActivityHistory[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, name])
+  @@index([workspaceId, company])
+  @@index([workspaceId, isArchived])
+}
+
+model Meeting {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactId   String
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  title       String
+  date        String    // YYYY-MM-DD
+  time        String    // HH:mm
+  location    String?
+  purpose     String?
+  notes       String?
+  reminder    String    @default("1_hour")
+  status      String    @default("pending") // pending | completed | rescheduled | cancelled | overdue
+  completedAt String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, date])
+  @@index([workspaceId, status])
+  @@index([contactId])
+}
+
+model FollowUp {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactId   String
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  title       String
+  date        String    // YYYY-MM-DD
+  time        String    // HH:mm
+  notes       String?
+  reminder    String    @default("1_hour")
+  status      String    @default("pending") // pending | completed | rescheduled | cancelled | overdue
+  completedAt String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, date])
+  @@index([workspaceId, status])
+  @@index([contactId])
+}
+
+model Note {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactId    String
+  contact      Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  meetingId    String?
+  followUpId   String?
+  activityType String?   @default("general") // meeting | follow_up | call | general
+  activityId   String?
+  note         String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([contactId])
+}
+
+model Reminder {
+  id                 String    @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activityType       String    // meeting | follow_up
+  activityId         String
+  contactId          String
+  title              String
+  reminderTime       String    // ISO 8601 string
+  notificationStatus String    @default("pending") // pending | sent | dismissed | failed
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, reminderTime])
+  @@index([activityId])
+}
+
+model ActivityHistory {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactId    String
+  contact      Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  activityType String    // meeting | follow_up | call | note | contact
+  activityId   String
+  action       String    // created | edited | called | note_added | completed | rescheduled | cancelled | reminder_sent | archived
+  previousData String?   // JSON serialized
+  newData      String?   // JSON serialized
+  reason       String?
+  createdAt    DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([activityId])
+}
+
+model Notification {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type         String    // daily_summary | meeting_reminder | followup_reminder | overdue_alert | system
+  title        String
+  message      String
+  activityId   String?
+  activityType String?
+  contactId    String?
+  timestamp    DateTime  @default(now())
+  isRead       Boolean   @default(false)
+
+  @@index([workspaceId])
+  @@index([workspaceId, isRead])
+}

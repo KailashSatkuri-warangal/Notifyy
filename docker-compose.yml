@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  notifyy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notifyy-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/notifyy.db
+      - JWT_SECRET=notifyy_secure_random_jwt_secret_token_prod_99812
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    volumes:
+      - notifyy-data:/app/data
+
+volumes:
+  notifyy-data:
