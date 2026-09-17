@@ -20,6 +20,8 @@ import { ThemeToggle } from "./ThemeToggle";
 import { APP_METADATA } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 
+import { NotifyyLogo } from "@/components/ui";
+
 export function Sidebar() {
   const pathname = usePathname();
   const { unreadNotificationCount, openQuickCreate, user, workspace, logout } = useDataStore();
@@ -48,9 +50,7 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="p-6 pb-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/60">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-            N
-          </div>
+          <NotifyyLogo size="md" />
           <div>
             <h1 className="font-bold text-zinc-900 dark:text-white text-base tracking-tight leading-none flex items-center gap-1.5">
               {APP_METADATA.name}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, NotifyyLogo } from "@/components/ui";
 import { Lock, Mail, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
@@ -85,9 +85,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-600/30">
-            N
-          </div>
+          <NotifyyLogo size="lg" className="mx-auto" />
           <h1 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
             Welcome to Notifyy
           </h1>

@@ -238,3 +238,68 @@ export function EmptyState({
     </div>
   );
 }
+
+// NOTIFYY BRAND LOGO (VECTOR SQUIRCLE WITH GLOW)
+export function NotifyyLogo({
+  size = "md",
+  className = "",
+}: {
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  className?: string;
+}) {
+  const sizeMap = {
+    xs: "w-6 h-6",
+    sm: "w-8 h-8",
+    md: "w-9 h-9",
+    lg: "w-11 h-11",
+    xl: "w-14 h-14",
+  };
+
+  return (
+    <div
+      className={cn(
+        "relative shrink-0 flex items-center justify-center rounded-2xl overflow-hidden shadow-md shadow-indigo-600/30 group-hover:scale-105 transition-transform",
+        sizeMap[size],
+        className
+      )}
+    >
+      <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6366f1" />
+            <stop offset="50%" stopColor="#4f46e5" />
+            <stop offset="100%" stopColor="#3730a3" />
+          </linearGradient>
+          <linearGradient id="logoLetter" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#e0e7ff" />
+          </linearGradient>
+          <linearGradient id="logoAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#818cf8" />
+          </linearGradient>
+        </defs>
+
+        {/* Base Squircle */}
+        <rect width="100" height="100" rx="26" fill="url(#logoBg)" />
+        {/* Specular Rim */}
+        <rect x="1" y="1" width="98" height="98" rx="25" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+
+        {/* Dynamic Stylized N & Notification Bell Symbol */}
+        <g transform="translate(50, 50)">
+          {/* Left vertical bar */}
+          <path d="M-22,-20 L-12,-20 A 2 2 0 0 1 -10,-18 L-10,18 A 2 2 0 0 1 -12,20 L-22,20 A 2 2 0 0 1 -24,18 L-24,-18 A 2 2 0 0 1 -22,-20 Z" fill="url(#logoLetter)" />
+          {/* Diagonal bridge */}
+          <path d="M-12,-18 L15,14 A 2 2 0 0 1 14,17 L9,18 A 2 2 0 0 1 6,17 L-23,-15 A 2 2 0 0 1 -22,-18 Z" fill="url(#logoLetter)" opacity="0.95" />
+          {/* Right vertical bar */}
+          <path d="M12,-20 L22,-20 A 2 2 0 0 1 24,-18 L24,18 A 2 2 0 0 1 22,20 L12,20 A 2 2 0 0 1 10,18 L10,-18 A 2 2 0 0 1 12,-20 Z" fill="url(#logoLetter)" />
+          {/* Active Ping Sparkle / Red Indicator */}
+          <circle cx="21" cy="-20" r="5.5" fill="#f43f5e" stroke="#ffffff" strokeWidth="1.5" />
+          {/* Arc accent */}
+          <path d="M-15,26 Q 0,33 15,26" stroke="url(#logoAccent)" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+

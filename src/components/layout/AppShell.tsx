@@ -13,13 +13,15 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useDataStore } from "@/hooks/useDataStore";
 
+import { NotifyyLogo } from "@/components/ui";
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts();
   const pathname = usePathname();
   const { isInitialized } = useDataStore();
 
   useEffect(() => {
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
         .then((reg) => console.log("Notifyy Service Worker registered:", reg.scope))
@@ -33,9 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-600/30 animate-pulse">
-            N
-          </div>
+          <NotifyyLogo size="xl" className="mx-auto animate-pulse" />
           <h2 className="text-base font-bold text-zinc-800 dark:text-zinc-200">Notifyy</h2>
           <p className="text-xs text-zinc-500">Connecting to database...</p>
         </div>
