@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
@@ -17,6 +17,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts();
   const pathname = usePathname();
   const { isInitialized } = useDataStore();
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("Notifyy Service Worker registered:", reg.scope))
+        .catch((err) => console.error("Service Worker registration failed:", err));
+    }
+  }, []);
 
   const isAuthPage = pathname === "/login" || pathname === "/register";
 

@@ -1,24 +1,148 @@
 {
-  "name": "Notifyy — Smart Meetings, Calls & Follow-Ups",
+  "id": "/",
+  "name": "Notifyy — Smart Meetings, Calls & Follow-Up Management",
   "short_name": "Notifyy",
-  "description": "Smart meetings, phone calls, notes and recurring follow-up reminders.",
+  "description": "Professional personal business assistant for managing customer meetings, direct phone calls, quick notes, and recurring follow-up reminders.",
   "start_url": "/dashboard",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#09090b",
   "theme_color": "#4f46e5",
-  "orientation": "portrait-primary",
+  "categories": [
+    "business",
+    "productivity",
+    "utilities",
+    "finance"
+  ],
+  "launch_handler": {
+    "client_mode": "auto"
+  },
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "note_taking": {
+    "new_note_url": "/notes"
+  },
+  "share_target": {
+    "action": "/contacts",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+notifyy",
+      "url": "/search?q=%s"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Schedule Follow-Up",
+      "short_name": "Follow-Up",
+      "description": "Schedule a call or client follow-up reminder",
+      "url": "/follow-ups",
+      "icons": [
+        {
+          "src": "/icons/shortcut-followup.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "New Meeting",
+      "short_name": "Meeting",
+      "description": "Create and schedule a client meeting",
+      "url": "/meetings",
+      "icons": [
+        {
+          "src": "/icons/shortcut-meeting.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Contacts Directory",
+      "short_name": "Contacts",
+      "description": "Browse and direct call your client directory",
+      "url": "/contacts",
+      "icons": [
+        {
+          "src": "/icons/shortcut-contact.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Notes & Interaction Log",
+      "short_name": "Notes",
+      "description": "Capture quick business discussion notes",
+      "url": "/notes",
+      "icons": [
+        {
+          "src": "/icons/shortcut-notes.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Notifyy Desktop Executive Dashboard & Calendar View"
+    },
+    {
+      "src": "/screenshots/mobile-1.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Notifyy Mobile Liquid Glass Agenda & Quick Actions"
     }
   ]
 }
