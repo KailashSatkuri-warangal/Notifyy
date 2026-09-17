@@ -19,6 +19,7 @@
     "canvas-confetti": "^1.9.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "framer-motion": "^13.4.0",
     "idb": "^8.0.0",
     "jose": "^6.2.12",
     "lucide-react": "^0.453.0",

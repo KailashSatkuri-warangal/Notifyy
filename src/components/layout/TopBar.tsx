@@ -32,7 +32,7 @@ export function TopBar() {
         {/* Mobile Brand Icon */}
         <Link
           href="/dashboard"
-          className="lg:hidden w-9 h-9 rounded-2xl bg-linear-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm flex items-center justify-center shadow-md shadow-indigo-600/30 shrink-0"
+          className="lg:hidden w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm flex items-center justify-center shadow-md shadow-indigo-600/30 shrink-0"
         >
           N
         </Link>

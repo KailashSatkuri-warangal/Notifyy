@@ -153,14 +153,21 @@ export default function CalendarPage() {
           {/* Month Matrix */}
           <div className="lg:col-span-2 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-xs">
             {/* Weekday headers */}
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-              <span>Sun</span>
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+              <span className="sm:hidden">S</span>
+              <span className="hidden sm:inline">Sun</span>
+              <span className="sm:hidden">M</span>
+              <span className="hidden sm:inline">Mon</span>
+              <span className="sm:hidden">T</span>
+              <span className="hidden sm:inline">Tue</span>
+              <span className="sm:hidden">W</span>
+              <span className="hidden sm:inline">Wed</span>
+              <span className="sm:hidden">T</span>
+              <span className="hidden sm:inline">Thu</span>
+              <span className="sm:hidden">F</span>
+              <span className="hidden sm:inline">Fri</span>
+              <span className="sm:hidden">S</span>
+              <span className="hidden sm:inline">Sat</span>
             </div>
 
             {/* Day Cells Grid */}
@@ -179,7 +186,7 @@ export default function CalendarPage() {
                   <button
                     key={day.toISOString()}
                     onClick={() => setSelectedDay(day)}
-                    className={`min-h-[70px] sm:min-h-[90px] p-2 rounded-2xl flex flex-col justify-between border text-left transition-all cursor-pointer ${
+                    className={`min-h-[54px] sm:min-h-[90px] p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex flex-col justify-between border text-left transition-all cursor-pointer ${
                       isSelected
                         ? "bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/30"
                         : isCurrentDay
@@ -189,11 +196,11 @@ export default function CalendarPage() {
                         : "bg-zinc-50/40 dark:bg-zinc-900/20 border-transparent opacity-40"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between w-full">
                       <span
-                        className={`text-xs font-bold ${
+                        className={`text-[11px] sm:text-xs font-bold ${
                           isCurrentDay
-                            ? "w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center -ml-1"
+                            ? "w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center -ml-0.5 sm:-ml-1"
                             : isSelected
                             ? "text-indigo-600 dark:text-indigo-400"
                             : "text-zinc-700 dark:text-zinc-300"
@@ -203,12 +210,28 @@ export default function CalendarPage() {
                       </span>
 
                       {hasOverdue && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="Overdue activities" />
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 animate-pulse" title="Overdue activities" />
                       )}
                     </div>
 
-                    {/* Activity indicator pills */}
-                    <div className="space-y-1 mt-1">
+                    {/* Mobile: iOS-style Compact Dots */}
+                    <div className="flex sm:hidden items-center justify-center gap-1 w-full mt-1">
+                      {dayActivities.slice(0, 3).map((a, i) => (
+                        <span
+                          key={a.id || i}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            a.status === "overdue"
+                              ? "bg-rose-500"
+                              : a.type === "meeting"
+                              ? "bg-blue-500"
+                              : "bg-indigo-500"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Desktop: Activity indicator pills */}
+                    <div className="hidden sm:block space-y-1 mt-1 w-full">
                       {dayActivities.slice(0, 2).map((a) => (
                         <div
                           key={a.id}
