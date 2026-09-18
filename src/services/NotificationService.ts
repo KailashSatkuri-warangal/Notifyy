@@ -23,20 +23,22 @@ export class NotificationService {
       return false;
     }
 
+    const defaultOptions: any = {
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      vibrate: [400, 200, 400, 200, 400],
+      requireInteraction: true,
+      tag: "notifyy-alert",
+      ...options,
+    };
+
     try {
       if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
         const reg = await navigator.serviceWorker.ready;
-        await reg.showNotification(title, {
-          icon: "/icons/icon-192.png",
-          badge: "/icons/icon-192.png",
-          ...options,
-        });
+        await reg.showNotification(title, defaultOptions);
         return true;
       } else {
-        new Notification(title, {
-          icon: "/icons/icon-192.png",
-          ...options,
-        });
+        new Notification(title, defaultOptions);
         return true;
       }
     } catch (e) {

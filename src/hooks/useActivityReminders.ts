@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useDataStore } from "./useDataStore";
 import { UnifiedActivity } from "@/types";
-import { playNotificationSound, triggerDeviceVibration } from "@/lib/sound-utils";
+import {
+  playNotificationSound,
+  startAlarmRing,
+  stopAlarmRing,
+  getIsAlarmRinging,
+  triggerDeviceVibration,
+} from "@/lib/sound-utils";
 import { notificationService } from "@/services/NotificationService";
-import { isToday, isPast } from "date-fns";
+import { isToday } from "date-fns";
 
 export interface ActiveTimerInfo {
   activity: UnifiedActivity;
@@ -15,13 +21,15 @@ export interface ActiveTimerInfo {
   formattedCountdown: string;
   isOverdue: boolean;
   isDueNow: boolean;
+  isRinging: boolean;
 }
 
 export function useActivityReminders() {
-  const { unifiedActivities, refreshData, contacts } = useDataStore();
+  const { unifiedActivities, refreshData } = useDataStore();
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const notifiedIdsRef = useRef<Set<string>>(new Set());
   const [dismissedActivityIds, setDismissedActivityIds] = useState<Set<string>>(new Set());
+  const [ringingActivityId, setRingingActivityId] = useState<string | null>(null);
 
   // Update clock every second for live countdown
   useEffect(() => {
@@ -38,7 +46,7 @@ export function useActivityReminders() {
       .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
   }, [unifiedActivities]);
 
-  // Find the most urgent activity (due soonest, either coming up in next 60 mins or overdue today)
+  // Find the most urgent activity (upcoming in next 45 mins OR overdue today)
   const activeTimer = useMemo<ActiveTimerInfo | null>(() => {
     const nowMs = currentTime.getTime();
 
@@ -49,12 +57,10 @@ export function useActivityReminders() {
       const diffMs = actMs - nowMs;
       const totalSec = Math.floor(diffMs / 1000);
 
-      // We show the live timer banner if:
-      // 1. Upcoming in the next 45 minutes
-      // 2. OR overdue today by up to 2 hours
       const isOverdue = totalSec < 0;
       const overdueHours = Math.abs(totalSec) / 3600;
 
+      // 1. Upcoming in the next 45 minutes
       if (!isOverdue && totalSec <= 45 * 60) {
         const mins = Math.floor(totalSec / 60);
         const secs = Math.abs(totalSec % 60);
@@ -68,33 +74,27 @@ export function useActivityReminders() {
           formattedCountdown: formatted,
           isOverdue: false,
           isDueNow: totalSec <= 60 && totalSec >= 0,
+          isRinging: ringingActivityId === act.id,
         };
       } else if (isOverdue && isToday(act.dateTime) && overdueHours <= 4) {
-        const absSec = Math.abs(totalSec);
-        const hrs = Math.floor(absSec / 3600);
-        const mins = Math.floor((absSec % 3600) / 60);
-        const secs = absSec % 60;
-        const formatted =
-          hrs > 0
-            ? `-${hrs}h ${mins}m`
-            : `-${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-
+        // 2. Overdue activity today: NO negative countdown digits!
         return {
           activity: act,
-          minutesRemaining: mins,
-          secondsRemaining: secs,
+          minutesRemaining: 0,
+          secondsRemaining: 0,
           totalSecondsRemaining: totalSec,
-          formattedCountdown: formatted,
+          formattedCountdown: "", // Removed negative time like -02:35
           isOverdue: true,
           isDueNow: false,
+          isRinging: ringingActivityId === act.id,
         };
       }
     }
 
     return null;
-  }, [pendingActivities, currentTime, dismissedActivityIds]);
+  }, [pendingActivities, currentTime, dismissedActivityIds, ringingActivityId]);
 
-  // Automated notification and sound trigger
+  // Automated Alarm & Notification triggers
   useEffect(() => {
     const nowMs = currentTime.getTime();
 
@@ -103,7 +103,7 @@ export function useActivityReminders() {
       const diffMs = actMs - nowMs;
       const diffMins = Math.floor(diffMs / (1000 * 60));
 
-      // 1. 15-Minute Heads Up Warning
+      // 1. 15-Minute Advance Heads Up
       const key15m = `${act.id}-15m`;
       if (diffMins <= 15 && diffMins > 1 && !notifiedIdsRef.current.has(key15m)) {
         notifiedIdsRef.current.add(key15m);
@@ -119,51 +119,67 @@ export function useActivityReminders() {
           }
         );
 
-        notificationService.createInAppNotification({
-          type: act.type === "meeting" ? "meeting_reminder" : "followup_reminder",
-          title: `Upcoming ${act.type === "meeting" ? "Meeting" : "Follow-Up"} in ${diffMins}m`,
-          message: `${act.title} with ${act.contactName} (${act.contactCompany}) is scheduled for ${act.time}.`,
-          activityId: act.id,
-          activityType: act.type,
-          contactId: act.contactId,
-        }).then(() => refreshData()).catch(() => {});
+        notificationService
+          .createInAppNotification({
+            type: act.type === "meeting" ? "meeting_reminder" : "followup_reminder",
+            title: `Upcoming ${act.type === "meeting" ? "Meeting" : "Follow-Up"} in ${diffMins}m`,
+            message: `${act.title} with ${act.contactName} (${act.contactCompany}) is scheduled for ${act.time}.`,
+            activityId: act.id,
+            activityType: act.type,
+            contactId: act.contactId,
+          })
+          .then(() => refreshData())
+          .catch(() => {});
       }
 
-      // 2. Exact Time / Due Now Warning (0 - 1 minute)
+      // 2. Exact Time / Due Now Warning (0 - 1 minute) -> LOUD CONTINUOUS ALARM RING
       const keyNow = `${act.id}-now`;
       if (diffMins <= 0 && diffMins >= -2 && !notifiedIdsRef.current.has(keyNow)) {
         notifiedIdsRef.current.add(keyNow);
+        setRingingActivityId(act.id);
 
-        playNotificationSound("alert");
-        triggerDeviceVibration([200, 100, 200, 100, 200]);
+        // Continuous pulsing alarm tone + screen wake notification
+        startAlarmRing(60);
 
         notificationService.showBrowserNotification(
-          `⏰ Time for ${act.title}!`,
+          `🔔 ALARM: ${act.title}!`,
           {
             body: `${act.type === "meeting" ? "Meeting is starting now" : "Follow-up call is due now"} with ${act.contactName}`,
             tag: keyNow,
+            requireInteraction: true,
           }
         );
 
-        notificationService.createInAppNotification({
-          type: act.type === "meeting" ? "meeting_reminder" : "followup_reminder",
-          title: `⏰ Due Now: ${act.title}`,
-          message: `${act.type === "meeting" ? "Meeting" : "Follow-up call"} with ${act.contactName} (${act.contactMobile || act.contactCompany}) is starting now.`,
-          activityId: act.id,
-          activityType: act.type,
-          contactId: act.contactId,
-        }).then(() => refreshData()).catch(() => {});
+        notificationService
+          .createInAppNotification({
+            type: act.type === "meeting" ? "meeting_reminder" : "followup_reminder",
+            title: `⏰ Due Now: ${act.title}`,
+            message: `${act.type === "meeting" ? "Meeting" : "Follow-up call"} with ${act.contactName} (${act.contactMobile || act.contactCompany}) is starting now.`,
+            activityId: act.id,
+            activityType: act.type,
+            contactId: act.contactId,
+          })
+          .then(() => refreshData())
+          .catch(() => {});
       }
     });
   }, [pendingActivities, currentTime, refreshData]);
 
-  const dismissTimer = (activityId: string) => {
+  const silenceAlarm = useCallback(() => {
+    stopAlarmRing();
+    setRingingActivityId(null);
+  }, []);
+
+  const dismissTimer = useCallback((activityId: string) => {
+    silenceAlarm();
     setDismissedActivityIds((prev) => new Set([...prev, activityId]));
-  };
+  }, [silenceAlarm]);
 
   return {
     activeTimer,
     dismissTimer,
+    silenceAlarm,
+    isAlarmRinging: !!ringingActivityId || getIsAlarmRinging(),
     currentTime,
   };
 }

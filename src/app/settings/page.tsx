@@ -430,6 +430,47 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
+
+            {/* Alarm Sound & Off-Screen Notification Test Controls */}
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-200/60 dark:border-amber-900/40">
+              <div>
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+                  Ringing Alarm & Background Alerts
+                </p>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-300/70">
+                  Loud continuous alarm tone + phone vibration even when the screen is locked
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const status = await import("@/services/NotificationService").then(m => m.notificationService.requestPermission());
+                    if (status === "granted") {
+                      toast("Browser notification permissions enabled! 🔔", "success");
+                    } else {
+                      toast("Please allow notification permissions in your browser bar.", "info");
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 transition-all active:scale-95 shadow-xs"
+                >
+                  Enable Permissions
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const { startAlarmRing, stopAlarmRing } = await import("@/lib/sound-utils");
+                    startAlarmRing(5);
+                    toast("🔊 Alarm ringing test for 5 seconds...", "info");
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white transition-all active:scale-95 shadow-xs flex items-center gap-1.5"
+                >
+                  🔊 Test Alarm
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

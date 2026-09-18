@@ -91,13 +91,14 @@ self.addEventListener("push", (event) => {
     body: data.body || data.message || "Never miss a follow-up.",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    vibrate: [100, 50, 100],
+    vibrate: [400, 200, 400, 200, 400, 200, 400],
+    requireInteraction: true,
     data: {
       url: data.url || "/dashboard",
     },
     actions: [
-      { action: "explore", title: "View Details" },
-      { action: "close", title: "Dismiss" }
+      { action: "explore", title: "📞 View & Call" },
+      { action: "close", title: "🔕 Dismiss" }
     ]
   };
 

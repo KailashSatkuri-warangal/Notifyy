@@ -119,23 +119,26 @@ export function LiveTimerBanner() {
                 </div>
               </div>
 
-              {/* Right: Live Ticking Countdown Pill & Dismiss */}
+              {/* Right: Live Ticking Countdown Pill or Status Badge & Dismiss */}
               <div className="flex items-center gap-2 shrink-0">
-                {/* Live Ticking Box */}
-                <div
-                  className={`px-3 py-1.5 rounded-xl font-mono text-xs sm:text-sm font-black tracking-wider flex items-center gap-1.5 shadow-xs ${
-                    isOverdue
-                      ? "bg-rose-600 text-white"
-                      : isDueNow
-                      ? "bg-amber-600 text-white animate-pulse"
-                      : "bg-indigo-600 text-white"
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{formattedCountdown}</span>
-                </div>
+                {isOverdue ? (
+                  <div className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black tracking-wider flex items-center gap-1.5 shadow-xs bg-rose-600 text-white">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Overdue</span>
+                  </div>
+                ) : isDueNow || activeTimer.isRinging ? (
+                  <div className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black tracking-wider flex items-center gap-1.5 shadow-xs bg-amber-500 text-white animate-pulse">
+                    <BellRing className="w-3.5 h-3.5 animate-bounce" />
+                    <span>Due Now</span>
+                  </div>
+                ) : (
+                  <div className="px-3 py-1.5 rounded-xl font-mono text-xs sm:text-sm font-black tracking-wider flex items-center gap-1.5 shadow-xs bg-indigo-600 text-white">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{formattedCountdown}</span>
+                  </div>
+                )}
 
-                {/* Dismiss Button */}
+                {/* Dismiss / Silence Button */}
                 <button
                   onClick={() => dismissTimer(activity.id)}
                   title="Dismiss alert"
@@ -146,7 +149,7 @@ export function LiveTimerBanner() {
               </div>
             </div>
 
-            {/* Bottom 1-Tap Action Buttons (Direct Call, WhatsApp, Calendar) */}
+            {/* Bottom 1-Tap Action Buttons (Direct Call, WhatsApp, Stop Alarm, Calendar) */}
             <div className="mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* 1-Tap Call */}
@@ -166,6 +169,17 @@ export function LiveTimerBanner() {
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span className="hidden xs:inline">WhatsApp</span>
                 </button>
+
+                {/* Stop Alarm Ringing Button if active */}
+                {activeTimer.isRinging && (
+                  <button
+                    onClick={() => dismissTimer(activity.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-xs active:scale-95 transition-all animate-pulse cursor-pointer"
+                  >
+                    <BellRing className="w-3.5 h-3.5 animate-spin" />
+                    <span>Stop Alarm</span>
+                  </button>
+                )}
               </div>
 
               {/* View in Calendar */}
