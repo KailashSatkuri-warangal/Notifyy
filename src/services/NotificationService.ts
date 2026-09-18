@@ -47,6 +47,17 @@ export class NotificationService {
     }
   }
 
+  async closeNotification(tag: string): Promise<void> {
+    if (typeof window === "undefined") return;
+    try {
+      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        const reg = await navigator.serviceWorker.ready;
+        const notifs = await reg.getNotifications({ tag });
+        notifs.forEach((n) => n.close());
+      }
+    } catch (_) {}
+  }
+
   async createInAppNotification(params: {
     type: AppNotification["type"];
     title: string;

@@ -13,6 +13,9 @@ import {
 import { notificationService } from "@/services/NotificationService";
 import { isToday } from "date-fns";
 
+const NOTIFIED_CACHE_KEY = "notifyy_notified_alarms_v1";
+const COMPLETED_BLACKLIST_KEY = "notifyy_completed_reminders_v1";
+
 export interface ActiveTimerInfo {
   activity: UnifiedActivity;
   minutesRemaining: number;
@@ -28,8 +31,31 @@ export function useActivityReminders() {
   const { unifiedActivities, refreshData } = useDataStore();
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const notifiedIdsRef = useRef<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [dismissedActivityIds, setDismissedActivityIds] = useState<Set<string>>(new Set());
   const [ringingActivityId, setRingingActivityId] = useState<string | null>(null);
+
+  // Initialize persistent deduplication caches
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedNotified = localStorage.getItem(NOTIFIED_CACHE_KEY);
+      if (storedNotified) {
+        const parsed = JSON.parse(storedNotified);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((k: string) => notifiedIdsRef.current.add(k));
+        }
+      }
+
+      const storedCompleted = localStorage.getItem(COMPLETED_BLACKLIST_KEY);
+      if (storedCompleted) {
+        const parsed = JSON.parse(storedCompleted);
+        if (Array.isArray(parsed)) {
+          setCompletedIds(new Set(parsed));
+        }
+      }
+    } catch (_) {}
+  }, []);
 
   // Update clock every second with Web Worker fallback to prevent mobile background throttling
   useEffect(() => {
@@ -59,12 +85,16 @@ export function useActivityReminders() {
     };
   }, []);
 
-  // Filter pending activities for today and upcoming
+  // Filter strictly pending/active activities, excluding completed/cancelled or blacklisted
   const pendingActivities = useMemo(() => {
     return unifiedActivities
-      .filter((a) => a.status === "pending" || a.status === "overdue")
+      .filter((a) => {
+        if (completedIds.has(a.id)) return false;
+        if (a.status === "completed" || a.status === "cancelled" || a.status === "rescheduled") return false;
+        return a.status === "pending" || a.status === "overdue";
+      })
       .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
-  }, [unifiedActivities]);
+  }, [unifiedActivities, completedIds]);
 
   // Find the most urgent activity (upcoming in next 45 mins OR overdue today)
   const activeTimer = useMemo<ActiveTimerInfo | null>(() => {
@@ -72,6 +102,7 @@ export function useActivityReminders() {
 
     for (const act of pendingActivities) {
       if (dismissedActivityIds.has(act.id)) continue;
+      if (completedIds.has(act.id)) continue;
 
       const actMs = act.dateTime.getTime();
       const diffMs = actMs - nowMs;
@@ -103,7 +134,7 @@ export function useActivityReminders() {
           minutesRemaining: 0,
           secondsRemaining: 0,
           totalSecondsRemaining: totalSec,
-          formattedCountdown: "", // Removed negative time like -02:35
+          formattedCountdown: "",
           isOverdue: true,
           isDueNow: false,
           isRinging: ringingActivityId === act.id,
@@ -112,13 +143,27 @@ export function useActivityReminders() {
     }
 
     return null;
-  }, [pendingActivities, currentTime, dismissedActivityIds, ringingActivityId]);
+  }, [pendingActivities, currentTime, dismissedActivityIds, completedIds, ringingActivityId]);
+
+  const silenceAlarm = useCallback(() => {
+    stopAlarmRing();
+    setRingingActivityId(null);
+  }, []);
+
+  const dismissTimer = useCallback((activityId: string) => {
+    silenceAlarm();
+    setDismissedActivityIds((prev) => new Set([...prev, activityId]));
+    notificationService.closeNotification(`notifyy-activity-${activityId}`);
+    notificationService.closeNotification(`${activityId}-now`);
+  }, [silenceAlarm]);
 
   // Automated Alarm & Notification triggers
   useEffect(() => {
     const nowMs = currentTime.getTime();
 
     pendingActivities.forEach((act) => {
+      if (completedIds.has(act.id)) return;
+
       const actMs = act.dateTime.getTime();
       const diffMs = actMs - nowMs;
       const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -127,6 +172,9 @@ export function useActivityReminders() {
       const key15m = `${act.id}-15m`;
       if (diffMins <= 15 && diffMins > 1 && !notifiedIdsRef.current.has(key15m)) {
         notifiedIdsRef.current.add(key15m);
+        try {
+          localStorage.setItem(NOTIFIED_CACHE_KEY, JSON.stringify(Array.from(notifiedIdsRef.current)));
+        } catch (_) {}
 
         playNotificationSound("chime");
         triggerDeviceVibration([150, 80, 150]);
@@ -156,6 +204,10 @@ export function useActivityReminders() {
       const keyNow = `${act.id}-now`;
       if (diffMins <= 0 && diffMins >= -2 && !notifiedIdsRef.current.has(keyNow)) {
         notifiedIdsRef.current.add(keyNow);
+        try {
+          localStorage.setItem(NOTIFIED_CACHE_KEY, JSON.stringify(Array.from(notifiedIdsRef.current)));
+        } catch (_) {}
+
         setRingingActivityId(act.id);
 
         // Continuous pulsing alarm tone + screen wake notification
@@ -165,7 +217,7 @@ export function useActivityReminders() {
           `⏰ Due: ${act.title}`,
           {
             body: `With ${act.contactName} (${act.contactCompany || act.contactMobile || "Client"}) · Scheduled at ${act.time}`,
-            tag: keyNow,
+            tag: `notifyy-activity-${act.id}`,
             requireInteraction: true,
             data: {
               activityId: act.id,
@@ -196,38 +248,27 @@ export function useActivityReminders() {
           .catch(() => {});
       }
     });
-  }, [pendingActivities, currentTime, refreshData]);
+  }, [pendingActivities, currentTime, completedIds, refreshData]);
 
-  const silenceAlarm = useCallback(() => {
-    stopAlarmRing();
-    setRingingActivityId(null);
-  }, []);
-
-  const dismissTimer = useCallback((activityId: string) => {
-    silenceAlarm();
-    setDismissedActivityIds((prev) => new Set([...prev, activityId]));
-  }, [silenceAlarm]);
-
-  // Listen for Service Worker background action messages (Complete/Snooze from lockscreen)
-  useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "ACTIVITY_COMPLETED" || event.data?.type === "ACTIVITY_RESCHEDULED") {
-        silenceAlarm();
-        refreshData();
-      }
-    };
-
-    navigator.serviceWorker.addEventListener("message", handleMessage);
-    return () => {
-      navigator.serviceWorker.removeEventListener("message", handleMessage);
-    };
-  }, [silenceAlarm, refreshData]);
-
+  // Complete Activity: fully cancel alarm and never trigger again
   const completeActivity = useCallback(async (activity: UnifiedActivity) => {
     silenceAlarm();
     dismissTimer(activity.id);
+
+    // Add to completed blacklist immediately
+    setCompletedIds((prev) => {
+      const next = new Set([...prev, activity.id]);
+      try {
+        localStorage.setItem(COMPLETED_BLACKLIST_KEY, JSON.stringify(Array.from(next)));
+      } catch (_) {}
+      return next;
+    });
+
+    // Close any active browser notification for this activity
+    notificationService.closeNotification(`notifyy-activity-${activity.id}`);
+    notificationService.closeNotification(`${activity.id}-now`);
+    notificationService.closeNotification(`${activity.id}-15m`);
+
     try {
       const endpoint = activity.type === "meeting"
         ? `/api/meetings/${activity.id}/complete`
@@ -239,9 +280,19 @@ export function useActivityReminders() {
     }
   }, [silenceAlarm, dismissTimer, refreshData]);
 
+  // Snooze Activity: postpone for specified minutes and re-arm alarm
   const snoozeActivity = useCallback(async (activity: UnifiedActivity, minutes: number = 5) => {
     silenceAlarm();
     dismissTimer(activity.id);
+
+    // Remove from notified cache so it can fire afresh when the snoozed time arrives
+    notifiedIdsRef.current.delete(`${activity.id}-now`);
+    try {
+      localStorage.setItem(NOTIFIED_CACHE_KEY, JSON.stringify(Array.from(notifiedIdsRef.current)));
+    } catch (_) {}
+
+    notificationService.closeNotification(`notifyy-activity-${activity.id}`);
+
     try {
       const snoozeDate = new Date(Date.now() + minutes * 60 * 1000);
       const newDate = snoozeDate.toISOString().split("T")[0];
@@ -261,6 +312,33 @@ export function useActivityReminders() {
       console.error("Failed to snooze activity", e);
     }
   }, [silenceAlarm, dismissTimer, refreshData]);
+
+  // Listen for Service Worker background action messages (Complete/Snooze from lockscreen)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "ACTIVITY_COMPLETED" && event.data?.activityId) {
+        silenceAlarm();
+        setCompletedIds((prev) => {
+          const next = new Set([...prev, event.data.activityId]);
+          try {
+            localStorage.setItem(COMPLETED_BLACKLIST_KEY, JSON.stringify(Array.from(next)));
+          } catch (_) {}
+          return next;
+        });
+        refreshData();
+      } else if (event.data?.type === "ACTIVITY_RESCHEDULED") {
+        silenceAlarm();
+        refreshData();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+    };
+  }, [silenceAlarm, refreshData]);
 
   return {
     activeTimer,

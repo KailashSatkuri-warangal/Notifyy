@@ -21,6 +21,24 @@ export async function GET(req: Request) {
     let processedCount = 0;
 
     for (const rem of dueReminders) {
+      // Check if activity is still active (not completed or cancelled)
+      let isActive = true;
+      if (rem.activityType === "meeting") {
+        const m = await prisma.meeting.findUnique({ where: { id: rem.activityId } });
+        if (!m || m.status === "completed" || m.status === "cancelled") isActive = false;
+      } else if (rem.activityType === "follow_up") {
+        const f = await prisma.followUp.findUnique({ where: { id: rem.activityId } });
+        if (!f || f.status === "completed" || f.status === "cancelled") isActive = false;
+      }
+
+      if (!isActive) {
+        await prisma.reminder.update({
+          where: { id: rem.id },
+          data: { notificationStatus: "dismissed" },
+        });
+        continue;
+      }
+
       await prisma.$transaction(async (tx) => {
         // Create in-app notification record
         await tx.notification.create({
