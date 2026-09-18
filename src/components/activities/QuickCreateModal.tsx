@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Modal, Button, Input } from "@/components/ui";
 import { useDataStore } from "@/hooks/useDataStore";
 import { useToast } from "@/components/ui/Toast";
-import { getTodayDateString, getCurrentTimeString } from "@/lib/date-utils";
+import { getTodayDateString, getCurrentTimeString, formatActivityTime } from "@/lib/date-utils";
 import { REMINDER_OPTIONS } from "@/lib/constants";
 import { ReminderOffset } from "@/types";
 import { Users, Video, Clock } from "lucide-react";
@@ -37,7 +37,7 @@ export function QuickCreateModal() {
   const [location, setLocation] = useState("");
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
-  const [reminder, setReminder] = useState<ReminderOffset>(settings.defaultReminder || "1_hour");
+  const [reminder, setReminder] = useState<ReminderOffset>(settings.defaultReminder || "at_time");
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -295,13 +295,34 @@ export function QuickCreateModal() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
-              <Input
-                type="time"
-                label="Time *"
-                required
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-              />
+              <div>
+                <Input
+                  type="time"
+                  label={`Time * (${formatActivityTime(time) || "Set Time"})`}
+                  required
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Quick Time Presets */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <span className="text-[11px] text-zinc-400 font-semibold shrink-0">Quick Time:</span>
+              {["09:00", "10:00", "11:00", "14:00", "16:00", "18:00"].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setTime(preset)}
+                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-colors shrink-0 ${
+                    time === preset
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-indigo-400"
+                  }`}
+                >
+                  {formatActivityTime(preset)}
+                </button>
+              ))}
             </div>
 
             {activeTab === "meeting" && (

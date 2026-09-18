@@ -1,10 +1,10 @@
 import { ReminderOffset, UserSettings } from "@/types";
 
 export const REMINDER_OPTIONS: { value: ReminderOffset; label: string }[] = [
-  { value: "at_time", label: "At time of activity" },
+  { value: "at_time", label: "At time of activity (Exact)" },
   { value: "15_min", label: "15 minutes before" },
   { value: "30_min", label: "30 minutes before" },
-  { value: "1_hour", label: "1 hour before (Default)" },
+  { value: "1_hour", label: "1 hour before" },
   { value: "1_day", label: "1 day before" },
   { value: "none", label: "No reminder" },
 ];
@@ -20,7 +20,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   overdueAlertsEnabled: true,
   soundEnabled: true,
   vibrationEnabled: true,
-  defaultReminder: "1_hour",
+  defaultReminder: "at_time",
   theme: "system",
 };
 

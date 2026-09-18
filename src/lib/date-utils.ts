@@ -32,18 +32,40 @@ import {
 import { ReminderOffset } from "@/types";
 
 export function parseActivityDateTime(dateStr: string, timeStr: string): Date {
-  const cleanTime = timeStr.length === 5 ? timeStr : timeStr.substring(0, 5);
-  const combined = `${dateStr}T${cleanTime}:00`;
-  const parsed = new Date(combined);
-  if (!isNaN(parsed.getTime())) {
-    return parsed;
+  if (!dateStr) return new Date();
+  
+  // Extract hours & minutes cleanly
+  let hours = 9;
+  let minutes = 0;
+  
+  if (timeStr) {
+    const isPM = /pm/i.test(timeStr);
+    const isAM = /am/i.test(timeStr);
+    const digitsOnly = timeStr.replace(/[^0-9:]/g, "");
+    const parts = digitsOnly.split(":").map(Number);
+    
+    if (parts.length >= 1 && !isNaN(parts[0])) {
+      hours = parts[0];
+      if (isPM && hours < 12) hours += 12;
+      if (isAM && hours === 12) hours = 0;
+    }
+    if (parts.length >= 2 && !isNaN(parts[1])) {
+      minutes = parts[1];
+    }
   }
-  return parse(`${dateStr} ${cleanTime}`, "yyyy-MM-dd HH:mm", new Date());
+
+  const dateParts = dateStr.split("-").map(Number);
+  const year = dateParts[0] || new Date().getFullYear();
+  const month = (dateParts[1] || 1) - 1;
+  const day = dateParts[2] || 1;
+
+  return new Date(year, month, day, hours, minutes, 0, 0);
 }
 
 export function formatActivityDate(dateStr: string): string {
   try {
-    const parsed = parse(dateStr, "yyyy-MM-dd", new Date());
+    const parts = dateStr.split("-").map(Number);
+    const parsed = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0);
     if (isDateToday(parsed)) return "Today";
     if (isDateTomorrow(parsed)) return "Tomorrow";
     if (isDateYesterday(parsed)) return "Yesterday";
@@ -54,10 +76,21 @@ export function formatActivityDate(dateStr: string): string {
 }
 
 export function formatActivityTime(timeStr: string): string {
+  if (!timeStr) return "";
   try {
-    const cleanTime = timeStr.substring(0, 5);
-    const parsed = parse(cleanTime, "HH:mm", new Date());
-    return format(parsed, "h:mm a");
+    const isPM = /pm/i.test(timeStr);
+    const isAM = /am/i.test(timeStr);
+    const digitsOnly = timeStr.replace(/[^0-9:]/g, "");
+    const parts = digitsOnly.split(":").map(Number);
+    
+    let hours = parts[0] || 0;
+    const minutes = parts[1] || 0;
+
+    if (isPM && hours < 12) hours += 12;
+    if (isAM && hours === 12) hours = 0;
+
+    const dummy = new Date(2026, 0, 1, hours, minutes, 0);
+    return format(dummy, "h:mm a");
   } catch {
     return timeStr;
   }

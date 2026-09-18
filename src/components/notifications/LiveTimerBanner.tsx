@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Sparkles,
 } from "lucide-react";
+import { formatActivityTime } from "@/lib/date-utils";
 import Link from "next/link";
 
 export function LiveTimerBanner() {
@@ -104,8 +105,8 @@ export function LiveTimerBanner() {
                     >
                       {isOverdue ? "Overdue" : isDueNow ? "Due Now" : `Starts in ${formattedCountdown}`}
                     </span>
-                    <span className="text-[11px] text-zinc-500 font-medium hidden xs:inline">
-                      {activity.time}
+                    <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                      {formatActivityTime(activity.time)}
                     </span>
                   </div>
 

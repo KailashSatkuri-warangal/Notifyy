@@ -69,11 +69,15 @@ export function useActivityReminders() {
           isOverdue: false,
           isDueNow: totalSec <= 60 && totalSec >= 0,
         };
-      } else if (isOverdue && isToday(act.dateTime) && overdueHours <= 3) {
+      } else if (isOverdue && isToday(act.dateTime) && overdueHours <= 4) {
         const absSec = Math.abs(totalSec);
-        const mins = Math.floor(absSec / 60);
+        const hrs = Math.floor(absSec / 3600);
+        const mins = Math.floor((absSec % 3600) / 60);
         const secs = absSec % 60;
-        const formatted = `-${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+        const formatted =
+          hrs > 0
+            ? `-${hrs}h ${mins}m`
+            : `-${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 
         return {
           activity: act,
