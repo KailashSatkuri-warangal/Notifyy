@@ -276,6 +276,56 @@ export function downloadIcsFile(filename: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Trigger native mobile alarm clock intent on Android or calendar alarm on iOS
+ */
+export function setNativeDeviceAlarm(params: { timeStr: string; title: string; dateStr?: string }): boolean {
+  if (typeof window === "undefined") return false;
+
+  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera || "";
+  const isAndroid = /android/i.test(userAgent);
+
+  // Extract numeric 24-hour time
+  let hours = 9;
+  let minutes = 0;
+  if (params.timeStr) {
+    const isPM = /pm/i.test(params.timeStr);
+    const isAM = /am/i.test(params.timeStr);
+    const digitsOnly = params.timeStr.replace(/[^0-9:]/g, "");
+    const parts = digitsOnly.split(":").map(Number);
+    if (parts.length >= 1 && !isNaN(parts[0])) {
+      hours = parts[0];
+      if (isPM && hours < 12) hours += 12;
+      if (isAM && hours === 12) hours = 0;
+    }
+    if (parts.length >= 2 && !isNaN(parts[1])) {
+      minutes = parts[1];
+    }
+  }
+
+  if (isAndroid) {
+    try {
+      const intentUrl = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.HOUR=${hours};i.android.intent.extra.MINUTES=${minutes};S.android.intent.extra.MESSAGE=${encodeURIComponent(params.title)};B.android.intent.extra.SKIP_UI=false;end`;
+      window.location.href = intentUrl;
+      return true;
+    } catch {
+      // Fallback to calendar if intent fails
+    }
+  }
+
+  if (params.dateStr) {
+    const calUrl = generateGoogleCalendarUrl({
+      title: params.title,
+      date: params.dateStr,
+      time: params.timeStr,
+    });
+    window.open(calUrl, "_blank");
+    return true;
+  }
+
+  return false;
+}
+
 export {
   format,
   parse,

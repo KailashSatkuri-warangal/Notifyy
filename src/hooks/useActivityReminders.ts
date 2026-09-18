@@ -31,12 +31,32 @@ export function useActivityReminders() {
   const [dismissedActivityIds, setDismissedActivityIds] = useState<Set<string>>(new Set());
   const [ringingActivityId, setRingingActivityId] = useState<string | null>(null);
 
-  // Update clock every second for live countdown
+  // Update clock every second with Web Worker fallback to prevent mobile background throttling
   useEffect(() => {
+    let worker: Worker | null = null;
+    try {
+      if (typeof window !== "undefined" && "Worker" in window) {
+        worker = new Worker("/reminder-worker.js");
+        worker.postMessage({ type: "START", interval: 1000 });
+        worker.onmessage = (e) => {
+          if (e.data?.type === "TICK") {
+            setCurrentTime(new Date());
+          }
+        };
+      }
+    } catch (_) {}
+
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-    return () => clearInterval(timer);
+
+    return () => {
+      clearInterval(timer);
+      if (worker) {
+        worker.postMessage({ type: "STOP" });
+        worker.terminate();
+      }
+    };
   }, []);
 
   // Filter pending activities for today and upcoming

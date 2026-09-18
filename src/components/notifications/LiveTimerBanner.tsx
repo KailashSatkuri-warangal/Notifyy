@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Sparkles,
 } from "lucide-react";
-import { formatActivityTime } from "@/lib/date-utils";
+import { formatActivityTime, setNativeDeviceAlarm } from "@/lib/date-utils";
 import Link from "next/link";
 
 export function LiveTimerBanner() {
@@ -168,6 +168,16 @@ export function LiveTimerBanner() {
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span className="hidden xs:inline">WhatsApp</span>
+                </button>
+
+                {/* 1-Tap Phone Clock Alarm Trigger */}
+                <button
+                  onClick={() => setNativeDeviceAlarm({ timeStr: activity.time, title: `${activity.title} (${activity.contactName})`, dateStr: activity.date })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/80 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                  title="Set phone hardware alarm"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="hidden xs:inline">Set Phone Alarm</span>
                 </button>
 
                 {/* Stop Alarm Ringing Button if active */}
