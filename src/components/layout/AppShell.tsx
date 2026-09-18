@@ -33,23 +33,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  if (!isInitialized) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-center space-y-3">
-          <NotifyyLogo size="xl" className="mx-auto animate-pulse" />
-          <h2 className="text-base font-bold text-zinc-800 dark:text-zinc-200">Notifyy</h2>
-          <p className="text-xs text-zinc-500">Connecting to database...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (isAuthPage) {
     return (
       <ToastProvider>
         <main>{children}</main>
       </ToastProvider>
+    );
+  }
+
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-white">
+        <div className="text-center space-y-4 max-w-xs w-full px-6">
+          <NotifyyLogo size="lg" className="mx-auto animate-pulse shadow-glow-primary" />
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold tracking-tight text-zinc-200">Notifyy</h2>
+            <div className="h-1 w-28 mx-auto bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-primary-500 to-indigo-500 animate-[shimmer_1.2s_infinite]" />
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 

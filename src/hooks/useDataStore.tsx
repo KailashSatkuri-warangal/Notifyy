@@ -86,6 +86,16 @@ interface DataStoreContextType {
 
 const DataStoreContext = createContext<DataStoreContextType | null>(null);
 
+const LOCAL_CACHE_KEY = "notifyy_cache_v2";
+
+const defaultStats: DashboardStats = {
+  todayMeetings: 0,
+  todayFollowUps: 0,
+  overdueActivities: 0,
+  completedToday: 0,
+  upcomingActivities: 0,
+};
+
 export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -99,13 +109,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_USER_SETTINGS);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    todayMeetings: 0,
-    todayFollowUps: 0,
-    overdueActivities: 0,
-    completedToday: 0,
-    upcomingActivities: 0,
-  });
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(defaultStats);
 
   // Modal states
   const [activeCallContact, setActiveCallContact] = useState<Contact | null>(null);
@@ -121,51 +125,78 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
+  // 1. Instant Cache Rehydration on mount (0ms perceived load)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const cached = localStorage.getItem(LOCAL_CACHE_KEY);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (data.user && data.workspace) {
+          setUser(data.user);
+          setWorkspace(data.workspace);
+          if (data.settings) setSettings(data.settings);
+          if (Array.isArray(data.contacts)) setContacts(data.contacts);
+          if (Array.isArray(data.meetings)) setMeetings(data.meetings);
+          if (Array.isArray(data.followUps)) setFollowUps(data.followUps);
+          if (Array.isArray(data.notes)) setNotes(data.notes);
+          if (Array.isArray(data.notifications)) setNotifications(data.notifications);
+          if (data.dashboardStats) setDashboardStats(data.dashboardStats);
+          setIsInitialized(true);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to read local cache:", e);
+    }
+  }, []);
+
+  // 2. Single consolidated bootstrap request (Stale-While-Revalidate)
   const refreshData = useCallback(async () => {
     try {
-      // 1. Fetch Session & Profile
-      const meRes = await fetch("/api/auth/me");
-      const meData = await meRes.json();
+      const res = await fetch("/api/bootstrap");
+      const data = await res.json();
 
-      if (!meData.user || !meData.workspace) {
+      if (!data.authenticated || !data.user || !data.workspace) {
         if (!isAuthPage) {
+          try {
+            localStorage.removeItem(LOCAL_CACHE_KEY);
+          } catch (_) {}
           router.push("/login");
         }
         setIsInitialized(true);
         return;
       }
 
-      setUser(meData.user);
-      setWorkspace(meData.workspace);
-      if (meData.settings) {
-        setSettings(meData.settings);
+      setUser(data.user);
+      setWorkspace(data.workspace);
+      if (data.settings) setSettings(data.settings);
+      if (Array.isArray(data.contacts)) setContacts(data.contacts);
+      if (Array.isArray(data.meetings)) setMeetings(data.meetings);
+      if (Array.isArray(data.followUps)) setFollowUps(data.followUps);
+      if (Array.isArray(data.notes)) setNotes(data.notes);
+      if (Array.isArray(data.notifications)) setNotifications(data.notifications);
+      if (data.dashboardStats) setDashboardStats(data.dashboardStats);
+
+      // Save fresh data to local cache for instant next load
+      try {
+        localStorage.setItem(
+          LOCAL_CACHE_KEY,
+          JSON.stringify({
+            user: data.user,
+            workspace: data.workspace,
+            settings: data.settings,
+            contacts: data.contacts,
+            meetings: data.meetings,
+            followUps: data.followUps,
+            notes: data.notes,
+            notifications: data.notifications,
+            dashboardStats: data.dashboardStats,
+            savedAt: Date.now(),
+          })
+        );
+      } catch (e) {
+        console.warn("Failed to write local cache:", e);
       }
-
-      // 2. Fetch all real workspace entities in parallel
-      const [cRes, mRes, fRes, nRes, notifsRes, dashRes] = await Promise.all([
-        fetch("/api/contacts"),
-        fetch("/api/meetings"),
-        fetch("/api/follow-ups"),
-        fetch("/api/notes"),
-        fetch("/api/notifications"),
-        fetch("/api/dashboard"),
-      ]);
-
-      const [cData, mData, fData, nData, notifsData, dashData] = await Promise.all([
-        cRes.json(),
-        mRes.json(),
-        fRes.json(),
-        nRes.json(),
-        notifsRes.json(),
-        dashRes.json(),
-      ]);
-
-      if (Array.isArray(cData)) setContacts(cData);
-      if (Array.isArray(mData)) setMeetings(mData);
-      if (Array.isArray(fData)) setFollowUps(fData);
-      if (Array.isArray(nData)) setNotes(nData);
-      if (Array.isArray(notifsData)) setNotifications(notifsData);
-      if (dashData?.stats) setDashboardStats(dashData.stats);
     } catch (err) {
       console.error("Failed to fetch live database records", err);
     } finally {
@@ -193,6 +224,9 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    try {
+      localStorage.removeItem(LOCAL_CACHE_KEY);
+    } catch (_) {}
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
     setWorkspace(null);
