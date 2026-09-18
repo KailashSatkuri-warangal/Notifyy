@@ -162,12 +162,25 @@ export function useActivityReminders() {
         startAlarmRing(60);
 
         notificationService.showBrowserNotification(
-          `🔔 ALARM: ${act.title}!`,
+          `⏰ Due: ${act.title}`,
           {
-            body: `${act.type === "meeting" ? "Meeting is starting now" : "Follow-up call is due now"} with ${act.contactName}`,
+            body: `With ${act.contactName} (${act.contactCompany || act.contactMobile || "Client"}) · Scheduled at ${act.time}`,
             tag: keyNow,
             requireInteraction: true,
-          }
+            data: {
+              activityId: act.id,
+              activityType: act.type,
+              contactMobile: act.contactMobile || "",
+              contactName: act.contactName || "",
+              contactId: act.contactId || "",
+              url: `/contacts/${act.contactId}`,
+            },
+            actions: [
+              { action: "call", title: "📞 Call" },
+              { action: "complete", title: "✅ Complete" },
+              { action: "snooze", title: "⏱️ Snooze (5m)" },
+            ],
+          } as any
         );
 
         notificationService
@@ -195,10 +208,66 @@ export function useActivityReminders() {
     setDismissedActivityIds((prev) => new Set([...prev, activityId]));
   }, [silenceAlarm]);
 
+  // Listen for Service Worker background action messages (Complete/Snooze from lockscreen)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "ACTIVITY_COMPLETED" || event.data?.type === "ACTIVITY_RESCHEDULED") {
+        silenceAlarm();
+        refreshData();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+    };
+  }, [silenceAlarm, refreshData]);
+
+  const completeActivity = useCallback(async (activity: UnifiedActivity) => {
+    silenceAlarm();
+    dismissTimer(activity.id);
+    try {
+      const endpoint = activity.type === "meeting"
+        ? `/api/meetings/${activity.id}/complete`
+        : `/api/follow-ups/${activity.id}/complete`;
+      await fetch(endpoint, { method: "POST" });
+      await refreshData();
+    } catch (e) {
+      console.error("Failed to complete activity", e);
+    }
+  }, [silenceAlarm, dismissTimer, refreshData]);
+
+  const snoozeActivity = useCallback(async (activity: UnifiedActivity, minutes: number = 5) => {
+    silenceAlarm();
+    dismissTimer(activity.id);
+    try {
+      const snoozeDate = new Date(Date.now() + minutes * 60 * 1000);
+      const newDate = snoozeDate.toISOString().split("T")[0];
+      const newTime = `${String(snoozeDate.getHours()).padStart(2, "0")}:${String(snoozeDate.getMinutes()).padStart(2, "0")}`;
+
+      const endpoint = activity.type === "meeting"
+        ? `/api/meetings/${activity.id}/reschedule`
+        : `/api/follow-ups/${activity.id}/reschedule`;
+
+      await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newDate, newTime, reason: `Snoozed ${minutes} minutes` }),
+      });
+      await refreshData();
+    } catch (e) {
+      console.error("Failed to snooze activity", e);
+    }
+  }, [silenceAlarm, dismissTimer, refreshData]);
+
   return {
     activeTimer,
     dismissTimer,
     silenceAlarm,
+    completeActivity,
+    snoozeActivity,
     isAlarmRinging: !!ringingActivityId || getIsAlarmRinging(),
     currentTime,
   };

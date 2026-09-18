@@ -13,6 +13,7 @@ import { NotifyyLogo } from "@/components/ui";
 export function TopBar() {
   const { openSearch, openQuickCreate, unreadNotificationCount, user } = useDataStore();
   const [isOnline, setIsOnline] = useState(true);
+  const [permStatus, setPermStatus] = useState<string>("granted");
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -21,11 +22,23 @@ export function TopBar() {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPermStatus(Notification.permission);
+    }
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  const handleEnableNotifications = async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const res = await Notification.requestPermission();
+      setPermStatus(res);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-20 w-full bg-white/85 dark:bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-200/80 dark:border-zinc-800/80 px-3.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between transition-colors">
@@ -53,6 +66,17 @@ export function TopBar() {
             <WifiOff className="w-3 h-3" />
             <span className="hidden xs:inline">Offline</span>
           </div>
+        )}
+
+        {permStatus === "default" && (
+          <button
+            onClick={handleEnableNotifications}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black shadow-xs active:scale-95 transition-all animate-pulse cursor-pointer"
+            title="Enable browser notifications for background alarms"
+          >
+            <Bell className="w-3 h-3 animate-bounce" />
+            <span className="hidden sm:inline">Enable Alarms</span>
+          </button>
         )}
 
         {/* Search Pill */}

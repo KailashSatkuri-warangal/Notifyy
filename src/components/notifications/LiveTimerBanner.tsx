@@ -21,7 +21,7 @@ import { formatActivityTime, setNativeDeviceAlarm } from "@/lib/date-utils";
 import Link from "next/link";
 
 export function LiveTimerBanner() {
-  const { activeTimer, dismissTimer } = useActivityReminders();
+  const { activeTimer, dismissTimer, completeActivity, snoozeActivity } = useActivityReminders();
   const { contacts } = useDataStore();
   const { initiateCall } = useCallAction();
   const [whatsAppActivity, setWhatsAppActivity] = useState<any | null>(null);
@@ -93,7 +93,7 @@ export function LiveTimerBanner() {
 
                 {/* Title & Contact Info */}
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
                         isOverdue
@@ -142,16 +142,16 @@ export function LiveTimerBanner() {
                 <button
                   onClick={() => dismissTimer(activity.id)}
                   title="Dismiss alert"
-                  className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 transition-colors"
+                  className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Bottom 1-Tap Action Buttons (Direct Call, WhatsApp, Stop Alarm, Calendar) */}
-            <div className="mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Bottom 1-Tap Action Buttons (Direct Call, Complete, Snooze, WhatsApp, Calendar) */}
+            <div className="mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 {/* 1-Tap Call */}
                 <button
                   onClick={handleCall}
@@ -159,6 +159,23 @@ export function LiveTimerBanner() {
                 >
                   <Phone className="w-3.5 h-3.5 fill-current" />
                   <span>Call Now</span>
+                </button>
+
+                {/* 1-Tap Complete & Cancel Alarm */}
+                <button
+                  onClick={() => completeActivity(activity)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <span>✅ Complete</span>
+                </button>
+
+                {/* 1-Tap Snooze (+5 Mins) */}
+                <button
+                  onClick={() => snoozeActivity(activity, 5)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Snooze (5m)</span>
                 </button>
 
                 {/* 1-Tap WhatsApp */}
@@ -173,11 +190,11 @@ export function LiveTimerBanner() {
                 {/* 1-Tap Phone Clock Alarm Trigger */}
                 <button
                   onClick={() => setNativeDeviceAlarm({ timeStr: activity.time, title: `${activity.title} (${activity.contactName})`, dateStr: activity.date })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/80 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 text-xs font-bold active:scale-95 transition-all cursor-pointer"
                   title="Set phone hardware alarm"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">Set Phone Alarm</span>
+                  <span className="hidden sm:inline">Phone Alarm</span>
                 </button>
 
                 {/* Stop Alarm Ringing Button if active */}
@@ -198,7 +215,7 @@ export function LiveTimerBanner() {
                 className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1"
               >
                 <CalendarIcon className="w-3.5 h-3.5" />
-                <span>Open Calendar →</span>
+                <span>Calendar →</span>
               </Link>
             </div>
           </div>
