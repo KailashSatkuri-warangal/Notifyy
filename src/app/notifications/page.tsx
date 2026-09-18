@@ -18,6 +18,8 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 
+import { playNotificationSound, triggerDeviceVibration } from "@/lib/sound-utils";
+
 export default function NotificationsPage() {
   const { notifications, refreshData } = useDataStore();
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
@@ -30,15 +32,27 @@ export default function NotificationsPage() {
   const handleRequestPermission = async () => {
     const res = await notificationService.requestPermission();
     setPermission(res);
+    if (res === "granted") {
+      playNotificationSound("success");
+      triggerDeviceVibration([100, 50, 100]);
+    }
+  };
+
+  const handlePlayTestChime = () => {
+    playNotificationSound("chime");
+    triggerDeviceVibration([150, 80, 150]);
   };
 
   const handleSendTestNotification = async () => {
     setIsSendingTest(true);
     try {
+      playNotificationSound("alert");
+      triggerDeviceVibration([200, 100, 200]);
+
       await notificationService.createInAppNotification({
         type: "system",
-        title: "Test Alert from Notifyy",
-        message: "Your notifications and reminders are active and functioning properly!",
+        title: "🔔 Test Alert from Notifyy",
+        message: "Your live timer countdown and reminder notifications are 100% active!",
       });
       await refreshData();
     } catch (err) {
@@ -72,7 +86,7 @@ export default function NotificationsPage() {
             </span>
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            System briefings, upcoming schedule alerts, and overdue follow-up reminders
+            System briefings, live upcoming timers, and scheduled follow-up alerts
           </p>
         </div>
 
@@ -88,8 +102,8 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Permission & Test Notification Card */}
-      <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Permission & Sound Testing Card */}
+      <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div
             className={`p-3 rounded-2xl ${
@@ -102,28 +116,36 @@ export default function NotificationsPage() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              Browser Permissions: <span className="capitalize">{permission}</span>
+              Browser Alerts: <span className="capitalize">{permission}</span>
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               {permission === "granted"
-                ? "Push and local desktop reminders will notify you on time."
-                : "Enable notifications so you never miss scheduled follow-ups."}
+                ? "Live ticking timers, audio chimes, and push notifications are active."
+                : "Tap Enable Notifications to receive automatic follow-up and meeting alerts."}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           {permission !== "granted" && permission !== "unsupported" && (
-            <Button size="sm" onClick={handleRequestPermission} className="text-xs w-full sm:w-auto">
+            <Button size="sm" onClick={handleRequestPermission} className="text-xs flex-1 lg:flex-none">
               Enable Notifications
             </Button>
           )}
           <Button
             variant="outline"
             size="sm"
+            onClick={handlePlayTestChime}
+            className="text-xs flex-1 lg:flex-none"
+          >
+            🔔 Test Audio Chime
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleSendTestNotification}
             isLoading={isSendingTest}
-            className="text-xs w-full sm:w-auto"
+            className="text-xs flex-1 lg:flex-none"
           >
             <Send className="w-3.5 h-3.5 mr-1" />
             Send Test Alert

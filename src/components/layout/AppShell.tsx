@@ -15,6 +15,8 @@ import { useDataStore } from "@/hooks/useDataStore";
 
 import { NotifyyLogo } from "@/components/ui";
 
+import { LiveTimerBanner } from "@/components/notifications/LiveTimerBanner";
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts();
   const pathname = usePathname();
@@ -58,7 +60,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-10">
           <TopBar />
-          <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto animate-fade-in">
+          <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-fade-in">
+            <LiveTimerBanner />
             {children}
           </main>
         </div>
