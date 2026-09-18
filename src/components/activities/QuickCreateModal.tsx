@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Modal, Button, Input } from "@/components/ui";
 import { useDataStore } from "@/hooks/useDataStore";
 import { useToast } from "@/components/ui/Toast";
-import { getTodayDateString, getCurrentTimeString, formatActivityTime } from "@/lib/date-utils";
+import { getTodayDateString, getCurrentTimeString, formatActivityTime, generateGoogleCalendarUrl } from "@/lib/date-utils";
 import { REMINDER_OPTIONS } from "@/lib/constants";
 import { ReminderOffset } from "@/types";
 import { Users, Video, Clock } from "lucide-react";
@@ -22,6 +22,9 @@ export function QuickCreateModal() {
 
   const [activeTab, setActiveTab] = useState<"meeting" | "follow_up" | "contact">("follow_up");
   const [selectedContactId, setSelectedContactId] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [syncToDeviceCalendar, setSyncToDeviceCalendar] = useState(false);
 
   // Contact Form States
   const [name, setName] = useState("");
@@ -38,8 +41,6 @@ export function QuickCreateModal() {
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
   const [reminder, setReminder] = useState<ReminderOffset>(settings.defaultReminder || "at_time");
-  const [isSaving, setIsSaving] = useState(false);
-  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (quickCreateType) {
@@ -115,6 +116,17 @@ export function QuickCreateModal() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
+        if (syncToDeviceCalendar) {
+          const calUrl = generateGoogleCalendarUrl({
+            title: `Meeting: ${title}`,
+            date,
+            time,
+            description: notes,
+            location,
+          });
+          window.open(calUrl, "_blank");
+        }
+
         toast(`Meeting scheduled for ${date}!`, "success");
       } else if (activeTab === "follow_up") {
         if (!selectedContactId || !title.trim() || !date || !time) {
@@ -137,6 +149,16 @@ export function QuickCreateModal() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
+
+        if (syncToDeviceCalendar) {
+          const calUrl = generateGoogleCalendarUrl({
+            title: `Follow-Up Call: ${title}`,
+            date,
+            time,
+            description: notes,
+          });
+          window.open(calUrl, "_blank");
+        }
 
         toast(`Follow-Up scheduled for ${date}!`, "success");
       }
@@ -372,6 +394,20 @@ export function QuickCreateModal() {
               />
             </div>
           </>
+        )}
+
+        {activeTab !== "contact" && (
+          <div className="pt-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={syncToDeviceCalendar}
+                onChange={(e) => setSyncToDeviceCalendar(e.target.checked)}
+                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <span>📅 Sync to Phone Calendar & Native Hardware Alarm</span>
+            </label>
+          </div>
         )}
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
